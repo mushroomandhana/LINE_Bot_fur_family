@@ -1,12 +1,11 @@
 import 'dotenv/config';
 import linebot from 'linebot';
 import axios from 'axios';
-import cheerio from 'cheerio';
-const PORT = process.env.PORT || 3000;
+// const PORT = process.env.PORT || 3030;
 
-app.listen(PORT, () => {
-  console.log(`server started on port ${PORT}`);
-})
+// app.listen(PORT, () => {
+//   console.log(`server started on port ${PORT}`);
+// })
 
 const bot = linebot({
 channelId: process.env.CHANNEL_ID,
@@ -26,12 +25,6 @@ if (event.message.type !== 'text') return;
 
 try {
 const inputText = event.message.text.trim().toLowerCase();
-const url = 'https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL';
-const htmlResponse = await axios.get(url);
-const $ = cheerio.load(htmlResponse.data);
-// 使用適當的選擇器來選擇您想要的元素
-const text = $('您想要選擇的元素').text();
-console.log(text);
 const response = await axios.get('https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL');
 const animalsData = response.data;
 
@@ -66,7 +59,7 @@ kind.includes(query) ||
 color.includes(query) ||
 address.includes(query)
 );
-}).slice(0, 15);// 查詢卡片則數
+}).slice(0, 10);// 查詢卡片則數最多10則 官方規定
 
 if (filteredAnimals.length > 0) {
     // 創建Flex Message
@@ -175,5 +168,4 @@ await event.reply({ type: 'text', text: '查詢時發生錯誤，請稍後再試
 bot.listen('/', 3000, () => {
 console.log('Bot 啟動中...');
 });
-
 
