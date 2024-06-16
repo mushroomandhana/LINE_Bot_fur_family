@@ -80,7 +80,20 @@ bot.on('message', async (event) => {
             .sort((a, b) => {
                 return a.distance - b.distance
             })
-            .slice(0, 10); // 查詢卡片則數最多10則 官方規定
+            .slice(0, 10) // 查詢卡片則數最多10則 官方規定
+
+            .map(d => {
+                const t = template()
+                t.body.contents[0].text = d.LL_Title
+                t.body.contents[1].text = d.LL_Highlights
+                t.body.contents[2].contents[0].contents[1].text = d.LL_Country + d.LL_Area + d.LL_Address
+                t.body.contents[2].contents[1].contents[1].text = d.LL_OpeningData
+                t.body.contents[2].contents[2].contents[1].text = d.LL_OpeningTime
+                t.footer.contents[0].action.uri = `https://www.google.com/maps/search/?api=1&query=${d.L_MapY},${d.L_MapX}`
+                t.footer.contents[1].action.uri = `https://taiwangods.moi.gov.tw/html/landscape/1_0011.aspx?i=${d.L_ID}`
+                return t
+            })
+
 
         // 如果所有動物都已顯示，則清空已顯示動物ID陣列並重新開始
         if (filteredAnimals.length === 0 && shownAnimals.size === animalsData.length) {
