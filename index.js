@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import linebot from 'linebot';
 import axios from 'axios';
+import { distance } from '../utils/distance.js'
 
 const bot = linebot({
     channelId: process.env.CHANNEL_ID,
@@ -70,7 +71,16 @@ bot.on('message', async (event) => {
                 color.includes(query) ||
                 address.includes(query)
             );
-        }).slice(0, 10); // 查詢卡片則數最多10則 官方規定
+        })
+        const replies = data
+            .map(d => {
+                d.distance = distance(d.L_MapY, d.L_MapX, event.message.latitude, event.message.longitude, 'K')
+                return d
+            })
+            .sort((a, b) => {
+                return a.distance - b.distance
+            })
+            .slice(0, 10); // 查詢卡片則數最多10則 官方規定
 
         // 如果所有動物都已顯示，則清空已顯示動物ID陣列並重新開始
         if (filteredAnimals.length === 0 && shownAnimals.size === animalsData.length) {
@@ -170,25 +180,25 @@ bot.on('message', async (event) => {
                                 layout: 'vertical',
                                 spacing: 'sm',
                                 contents: [
-                                  {
-                                    type: 'button',
-                                    style: 'link',
-                                    height: 'sm',
-                                    action: {
-                                      type: 'uri',
-                                      label: '地圖',
-                                      uri: mapUrl
+                                    {
+                                        type: 'button',
+                                        style: 'link',
+                                        height: 'sm',
+                                        action: {
+                                            type: 'uri',
+                                            label: '地圖',
+                                            uri: mapUrl
+                                        }
+                                    },
+                                    {
+                                        type: 'box',
+                                        layout: 'vertical',
+                                        contents: [],
+                                        margin: 'sm'
                                     }
-                                  },
-                                  {
-                                    type: 'box',
-                                    layout: 'vertical',
-                                    contents: [],
-                                    margin: 'sm'
-                                  }
                                 ],
                                 flex: 0
-                              },
+                            },
 
                         };
                     })
