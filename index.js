@@ -95,6 +95,10 @@ bot.on('message', async (event) => {
                     contents: filteredAnimals.map(animal => {
                         const areaName = animal.shelter_address.trim();
                         const sex = animal.animal_sex === 'M' ? '公' : animal.animal_sex === 'F' ? '母' : '未知';
+                        // 將地址轉換為URL編碼格式
+                        const mapQuery = encodeURIComponent(areaName);
+                        // 創建Google地圖的URL
+                        const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
                         return {
                             type: 'bubble',
                             hero: {
@@ -159,11 +163,37 @@ bot.on('message', async (event) => {
                                         ]
                                     }
                                 ]
-                            }
+                            },
+
+                            footer: {
+                                type: 'box',
+                                layout: 'vertical',
+                                spacing: 'sm',
+                                contents: [
+                                  {
+                                    type: 'button',
+                                    style: 'link',
+                                    height: 'sm',
+                                    action: {
+                                      type: 'uri',
+                                      label: '地圖',
+                                      uri: mapUrl
+                                    }
+                                  },
+                                  {
+                                    type: 'box',
+                                    layout: 'vertical',
+                                    contents: [],
+                                    margin: 'sm'
+                                  }
+                                ],
+                                flex: 0
+                              },
+
                         };
                     })
                 }
-            };
+            }
 
             // 使用axios發送回應
             await axios({
