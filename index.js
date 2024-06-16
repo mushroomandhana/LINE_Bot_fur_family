@@ -59,7 +59,7 @@ kind.includes(query) ||
 color.includes(query) ||
 address.includes(query)
 );
-}).slice(0, 3);
+}).slice(0, 15);// 查詢卡片則數
 
 if (filteredAnimals.length > 0) {
     // 創建Flex Message
