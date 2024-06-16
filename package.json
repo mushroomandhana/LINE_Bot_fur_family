@@ -1,0 +1,31 @@
+{
+  "type": "module",
+  "name": "line",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "linebot": "^1.6.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.1.0",
+    "@eslint/js": "^9.4.0",
+    "@line/bot-sdk": "^9.2.2",
+    "axios": "^1.7.2",
+    "eslint": "^8.57.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^16.6.2",
+    "eslint-plugin-promise": "^6.2.0",
+    "fs": "^0.0.1-security",
+    "globals": "^15.4.0",
+    "nodemon": "^3.1.3"
+  }
+}
