@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import linebot from 'linebot';
 import axios from 'axios';
+import cheerio from 'cheerio';
 // const PORT = process.env.PORT || 3030;
 
 // app.listen(PORT, () => {
@@ -25,6 +26,12 @@ if (event.message.type !== 'text') return;
 
 try {
 const inputText = event.message.text.trim().toLowerCase();
+const url = 'https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL';
+const htmlResponse = await axios.get(url);
+const $ = cheerio.load(htmlResponse.data);
+// 使用適當的選擇器來選擇您想要的元素
+const text = $('您想要選擇的元素').text();
+console.log(text);
 const response = await axios.get('https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL');
 const animalsData = response.data;
 
