@@ -2,11 +2,11 @@ import 'dotenv/config';
 import linebot from 'linebot';
 import axios from 'axios';
 import cheerio from 'cheerio';
-// const PORT = process.env.PORT || 3030;
+const PORT = process.env.PORT || 3000;
 
-// app.listen(PORT, () => {
-//   console.log(`server started on port ${PORT}`);
-// })
+app.listen(PORT, () => {
+  console.log(`server started on port ${PORT}`);
+})
 
 const bot = linebot({
 channelId: process.env.CHANNEL_ID,
