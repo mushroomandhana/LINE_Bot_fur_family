@@ -1,41 +1,6 @@
 import 'dotenv/config';
 import linebot from 'linebot';
 import axios from 'axios';
-module.exports.distance = function(lat1, lon1, lat2, lon2, unit) {
-    /**
- * 計算兩個經緯度座標的距離
- * @param {number} lat1 位置一的緯度
- * @param {number} lon1 位置一的經度
- * @param {number} lat2 位置二的緯度
- * @param {number} lon2 位置二的經度
- * @param {string} unit 單位，不傳是英里，K 是公里，N 是海里
- * @returns {number} 計算結果
- */
-const distance = (lat1, lon1, lat2, lon2, unit) => {
-    if (lat1 === lat2 && lon1 === lon2) {
-      return 0
-    } else {
-      const radlat1 = (Math.PI * lat1) / 180
-      const radlat2 = (Math.PI * lat2) / 180
-      const theta = lon1 - lon2
-      const radtheta = (Math.PI * theta) / 180
-      let dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta)
-      if (dist > 1) {
-        dist = 1
-      }
-      dist = Math.acos(dist)
-      dist = (dist * 180) / Math.PI
-      dist = dist * 60 * 1.1515
-      if (unit === 'K') {
-        dist = dist * 1.609344
-      }
-      if (unit === 'N') {
-        dist = dist * 0.8684
-      }
-      return dist
-    }
-  }
-    }
 
 const bot = linebot({
     channelId: process.env.CHANNEL_ID,
@@ -105,29 +70,7 @@ bot.on('message', async (event) => {
                 color.includes(query) ||
                 address.includes(query)
             );
-        })
-        const replies = data
-            .map(d => {
-                d.distance = distance(d.L_MapY, d.L_MapX, event.message.latitude, event.message.longitude, 'K')
-                return d
-            })
-            .sort((a, b) => {
-                return a.distance - b.distance
-            })
-            .slice(0, 10) // 查詢卡片則數最多10則 官方規定
-
-            .map(d => {
-                const t = template()
-                t.body.contents[0].text = d.LL_Title
-                t.body.contents[1].text = d.LL_Highlights
-                t.body.contents[2].contents[0].contents[1].text = d.LL_Country + d.LL_Area + d.LL_Address
-                t.body.contents[2].contents[1].contents[1].text = d.LL_OpeningData
-                t.body.contents[2].contents[2].contents[1].text = d.LL_OpeningTime
-                t.footer.contents[0].action.uri = `https://www.google.com/maps/search/?api=1&query=${d.L_MapY},${d.L_MapX}`
-                t.footer.contents[1].action.uri = `https://taiwangods.moi.gov.tw/html/landscape/1_0011.aspx?i=${d.L_ID}`
-                return t
-            })
-
+        }).slice(0, 10); // 查詢卡片則數最多10則 官方規定
 
         // 如果所有動物都已顯示，則清空已顯示動物ID陣列並重新開始
         if (filteredAnimals.length === 0 && shownAnimals.size === animalsData.length) {
@@ -152,10 +95,6 @@ bot.on('message', async (event) => {
                     contents: filteredAnimals.map(animal => {
                         const areaName = animal.shelter_address.trim();
                         const sex = animal.animal_sex === 'M' ? '公' : animal.animal_sex === 'F' ? '母' : '未知';
-                        // 將地址轉換為URL編碼格式
-                        const mapQuery = encodeURIComponent(areaName);
-                        // 創建Google地圖的URL
-                        const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
                         return {
                             type: 'bubble',
                             hero: {
@@ -220,37 +159,11 @@ bot.on('message', async (event) => {
                                         ]
                                     }
                                 ]
-                            },
-
-                            footer: {
-                                type: 'box',
-                                layout: 'vertical',
-                                spacing: 'sm',
-                                contents: [
-                                    {
-                                        type: 'button',
-                                        style: 'link',
-                                        height: 'sm',
-                                        action: {
-                                            type: 'uri',
-                                            label: '地圖',
-                                            uri: mapUrl
-                                        }
-                                    },
-                                    {
-                                        type: 'box',
-                                        layout: 'vertical',
-                                        contents: [],
-                                        margin: 'sm'
-                                    }
-                                ],
-                                flex: 0
-                            },
-
+                            }
                         };
                     })
                 }
-            }
+            };
 
             // 使用axios發送回應
             await axios({
@@ -279,4 +192,3 @@ bot.on('message', async (event) => {
 bot.listen('/', 3000, () => {
     console.log('Bot 啟動中...');
 });
-
