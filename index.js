@@ -8,82 +8,78 @@ const bot = linebot({
     channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN
 });
 
-// 新增一個映射函數來處理特定字串
 const queryMapping = {
     '我是貓派': '貓',
     '我是狗派': '狗',
-    '我是??': '其他'
+    '我是??': '其他',
+    '其他': '其他'
 };
 
-// 在bot初始化部分新增一個集合來存儲已顯示的動物ID
 const shownAnimals = new Set();
+let animalsData = []; // 將來從API獲取動物資料
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 bot.on('message', async (event) => {
     if (event.message.type !== 'text' || !event.message.text) {
-        // 如果消息不是文本類型或者文本內容是空的，則不處理
-        return;
+        return; // 非文本消息或文本內容為空，直接返回
     }
+
     const inputText = event.message.text.trim().toLowerCase();
-    // 確保 inputText 不是 undefined
-    if (!inputText) {
-        // 處理 inputText 是 undefined 的情況
+    let queries = inputText.split(/\s+/); // Split input into separate queries
+    // 特定查詢條件的處理，移到過濾之前
+    if (inputText === '我是貓派') {
+        queries.push('貓');
+    } else if (inputText === '我是狗派') {
+        queries.push('狗');
+    } else if (inputText.startsWith('我是??')) {
+        queries.push('其他');
+    } else if (inputText === '使用說明') {
+        await event.reply({ type: 'text', text: '📄領養查詢，使用說明：📄\n\n😼🐶❓類別查詢，請輸入：貓、狗或其他\n\n花色查詢，請輸入：三花、虎斑、白色、黑色、黃色...\n\n性別查詢，請輸入：公或母\n\n所在地區查詢，請輸入：臺灣各縣市：臺北、屏東、澎湖...\n\n' });
         return;
     }
+
     try {
-        const response = await axios.get('https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL');
-        if (!response.data || !Array.isArray(response.data)) {
-            console.error('Error: Expected an array of data');
-            // 處理錯誤情況，例如通過回復消息告知用戶
-            await event.reply({ type: 'text', text: '無法獲取動物數據，請稍後再試。' });
-            return;
-        }
-        const animalsData = response.data;
-
         // 解析用戶輸入的查詢條件
-        let queries = inputText.split(' ').filter(q => q); // 移除空字符串
-
-        // 使用映射函數處理特定查詢條件
         queries = queries.map(query => queryMapping[query] || query);
 
+        const response = await axios.get('https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL');
+        animalsData = response.data; // 在這裡賦值給 animalsData
 
-        // 特定查詢條件的處理
-        if (inputText === '我是貓派') {
-            queries.push('貓');
-        } else if (inputText === '我是狗派') {
-            queries.push('狗');
-        } else if (inputText.startsWith('我是其他')) {
-            queries.push(inputText.replace('我是其他', '').trim());
-        } else if (inputText === '使用說明') {
-            await event.reply({ type: 'text', text: '📄領養查詢，使用說明：📄\n\n😼🐶❓類別查詢，請輸入：貓、狗或其他\n\n花色查詢，請輸入：三花、虎斑、白色、黑色、黃色...\n\n性別查詢，請輸入：公或母\n\n所在地區查詢，請輸入：臺灣各縣市：臺北、屏東、澎湖...\n\n' });
-            return;
-        }
-
-        // 篩選出符合用戶查詢的動物資料
         let filteredAnimals = animalsData.filter(animal => {
-            const sex = animal.animal_sex === 'M' ? '公' : '母';
+            const sex = animal.animal_sex === 'M' ? '公' : animal.animal_sex === 'F' ? '母' : '未知';
             const kind = animal.animal_kind.trim().toLowerCase();
             const color = animal.animal_colour.trim().toLowerCase();
             const address = animal.shelter_address.trim().toLowerCase();
-            return queries.every(query =>
-                sex.includes(query) ||
-                kind.includes(query) ||
-                color.includes(query) ||
-                address.includes(query)
-            );
-        }).slice(0, 10); // 查詢卡片則數最多10則 官方規定
 
-        // 如果所有動物都已顯示，則清空已顯示動物ID陣列並重新開始
+            return queries.every(query => {
+                const escapedQuery = escapeRegExp(query);
+                return (
+                    (query === '公' && sex === '公') ||
+                    (query === '母' && sex === '母') ||
+                    kind.includes(escapedQuery) || // 修改：簡化匹配邏輯
+                    color.includes(escapedQuery) || // 修改：簡化匹配邏輯
+                    address.includes(escapedQuery) // 修改：簡化匹配邏輯
+                );
+            });
+        })
+
+        // 過濾已顯示的動物
+        filteredAnimals = filteredAnimals.filter(animal => !shownAnimals.has(animal.animal_id)).slice(0, 10);
+
+        // 如果所有動物都已顯示，則清空已顯示動物ID集合並重新開始
         if (filteredAnimals.length === 0 && shownAnimals.size === animalsData.length) {
             shownAnimals.clear();
-            filteredAnimals = animalsData;
+            filteredAnimals = animalsData.slice(0, 10);
         }
 
         // 從未顯示的動物中隨機選擇10個
         filteredAnimals = filteredAnimals.sort(() => 0.5 - Math.random()).slice(0, 10);
 
-        // 更新已顯示的動物ID陣列
+        // 更新已顯示的動物ID集合
         filteredAnimals.forEach(animal => shownAnimals.add(animal.animal_id));
-
 
         if (filteredAnimals.length > 0) {
             // 創建Flex Message
@@ -95,11 +91,14 @@ bot.on('message', async (event) => {
                     contents: filteredAnimals.map(animal => {
                         const areaName = animal.shelter_address.trim();
                         const sex = animal.animal_sex === 'M' ? '公' : animal.animal_sex === 'F' ? '母' : '未知';
+                        const mapQuery = encodeURIComponent(areaName);
+                        const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
+
                         return {
                             type: 'bubble',
                             hero: {
                                 type: 'image',
-                                url: animal.album_file, // 圖片URL
+                                url: animal.album_file,
                                 size: 'full',
                                 aspectRatio: '20:13',
                                 aspectMode: 'cover'
@@ -110,7 +109,7 @@ bot.on('message', async (event) => {
                                 contents: [
                                     {
                                         type: 'text',
-                                        text: animal.animal_kind, // 品種
+                                        text: animal.animal_kind,
                                         weight: 'bold',
                                         size: 'xl'
                                     },
@@ -146,7 +145,7 @@ bot.on('message', async (event) => {
                                             },
                                             {
                                                 type: 'text',
-                                                text: `地址: ${areaName}`,
+                                                text: `地址: ${animal.shelter_address}`,
                                                 color: '#aaaaaa',
                                                 size: 'sm'
                                             },
@@ -159,6 +158,40 @@ bot.on('message', async (event) => {
                                         ]
                                     }
                                 ]
+                            },
+                            footer: {
+                                type: 'box',
+                                layout: 'vertical',
+                                spacing: 'sm',
+                                contents: [
+                                    {
+                                        type: 'button',
+                                        style: 'link',
+                                        height: 'sm',
+                                        action: {
+                                            type: 'uri',
+                                            label: '地圖找我',
+                                            uri: mapUrl
+                                        }
+                                    },
+                                    {
+                                        type: 'box',
+                                        layout: 'vertical',
+                                        contents: [],
+                                        margin: 'sm'
+                                    },
+                                    {
+                                        type: 'button',
+                                        style: 'link',
+                                        height: 'sm',
+                                        action: {
+                                            type: 'uri',
+                                            label: '網站查詢',
+                                            uri: 'https://www.pet.gov.tw/AnimalApp/AnnounceMent.aspx?PageType=Adopt'
+                                        }
+                                    }
+                                ],
+                                flex: 0
                             }
                         };
                     })
@@ -180,8 +213,8 @@ bot.on('message', async (event) => {
             });
 
         } else {
-
-            await event.reply({ type: 'text', text: '找不到符合條件的動物，請嘗試其他關鍵字。' });
+            // 如果找不到符合條件的動物
+            await event.reply({ type: 'text', text: '找不到符合條件的動物。請嘗試其他關鍵字。' });
         }
     } catch (error) {
         console.error('Error:', error);
