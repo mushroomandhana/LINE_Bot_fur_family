@@ -15,10 +15,8 @@ const queryMapping = {
     '其他': '其他'
 };
 
+const shownAnimals = new Set();
 let animalsData = []; // 將來從API獲取動物資料
-
-// 新增 queryHistory 映射
-const queryHistory = new Map();
 
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -64,24 +62,38 @@ bot.on('message', async (event) => {
         // 解析用戶輸入的查詢條件
         queries = queries.map(query => queryMapping[query] || query);
 
-        // 從 queryHistory 映射中獲取之前的查詢結果
-        const previousResults = queryHistory.get(event.message.text) || new Set();
+        let filteredAnimals = animalsData.filter(animal => {
+            const sex = animal.animal_sex === 'M' ? '公' : animal.animal_sex === 'F' ? '母' : '未知';
+            const kind = animal.animal_kind.trim().toLowerCase();
+            const color = animal.animal_colour.trim().toLowerCase();
+            const address = animal.shelter_address.trim().toLowerCase();
 
-        // 隨機打亂 animalsData 陣列
-        let shuffledAnimals = animalsData.sort(() => 0.5 - Math.random());
+            return queries.every(query => {
+                const escapedQuery = escapeRegExp(query);
+                return (
+                    (query === '公' && sex === '公') ||
+                    (query === '母' && sex === '母') ||
+                    kind.includes(escapedQuery) ||
+                    color.includes(escapedQuery) ||
+                    address.includes(escapedQuery)
+                );
+            });
+        });
 
-        // 過濾出還沒有顯示過的動物
-        let filteredAnimals = shuffledAnimals.filter(animal => !previousResults.has(animal.animal_id));
+        // 過濾已顯示的動物
+        filteredAnimals = filteredAnimals.filter(animal => !shownAnimals.has(animal.animal_id)).slice(0, 10);
 
-        // 如果過濾後的結果不足10個，則從已顯示的動物中隨機選擇補充
-        if (filteredAnimals.length < 10) {
-            const supplementAnimals = shuffledAnimals.filter(animal => previousResults.has(animal.animal_id)).sort(() => 0.5 - Math.random());
-            filteredAnimals = [...filteredAnimals, ...supplementAnimals.slice(0, 10 - filteredAnimals.length)];
+        // 如果所有動物都已顯示，則清空已顯示動物ID集合並重新開始
+        if (filteredAnimals.length === 0 && shownAnimals.size === animalsData.length) {
+            shownAnimals.clear();
+            filteredAnimals = animalsData.slice(0, 10);
         }
 
-        // 更新 queryHistory 映射
-        filteredAnimals.forEach(animal => previousResults.add(animal.animal_id));
-        queryHistory.set(event.message.text, previousResults);
+        // 從未顯示的動物中隨機選擇10個
+        filteredAnimals = filteredAnimals.sort(() => 0.5 - Math.random()).slice(0, 10);
+
+        // 更新已顯示的動物ID集合
+        filteredAnimals.forEach(animal => shownAnimals.add(animal.animal_id));
 
         if (filteredAnimals.length > 0) {
             // 創建Flex Message
