@@ -15,7 +15,6 @@ const queryMapping = {
     '其他': '其他'
 };
 
-const shownAnimals = new Set();
 let animalsData = []; // 將來從API獲取動物資料
 
 function escapeRegExp(string) {
@@ -91,18 +90,15 @@ bot.on('message', async (event) => {
         // 從 queryResults 映射中獲取之前的查詢結果
         const previousResults = queryResults.get(event.message.text) || new Set();
 
-        // 過濾已顯示的動物
-        filteredAnimals = filteredAnimals.filter(animal => !previousResults.has(animal.animal_id)).slice(0, 10);
-
-        // 如果查詢結果不足，從未顯示的動物中補充
-        if (filteredAnimals.length < 10) {
-            const supplementAnimals = shuffledAnimals.filter(animal => !filteredAnimals.includes(animal)).slice(0, 10 - filteredAnimals.length);
-            filteredAnimals = filteredAnimals.concat(supplementAnimals);
-        }
-
         // 更新 queryResults 映射
         filteredAnimals.forEach(animal => previousResults.add(animal.animal_id));
         queryResults.set(event.message.text, previousResults);
+
+        // 如果查詢結果不足，從未顯示的動物中補充
+        if (filteredAnimals.length < 10) {
+            const supplementAnimals = shuffledAnimals.filter(animal => !previousResults.has(animal.animal_id)).slice(0, 10 - filteredAnimals.length);
+            filteredAnimals = [...filteredAnimals, ...supplementAnimals];
+        }
 
         if (filteredAnimals.length > 0) {
             // 創建Flex Message
