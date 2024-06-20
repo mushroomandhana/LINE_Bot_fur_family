@@ -62,7 +62,19 @@ bot.on('message', async (event) => {
         // 解析用戶輸入的查詢條件
         queries = queries.map(query => queryMapping[query] || query);
 
-        let filteredAnimals = animalsData.filter(animal => {
+        // 初始化filteredAnimals為一個空陣列
+        let filteredAnimals = [];
+
+        // 從未顯示過的動物中進行過濾
+        let newFilteredAnimals = animalsData.filter(animal => !shownAnimals.has(animal.animal_id));
+
+        // 如果查詢是'其他'，則忽略已顯示過的動物檢查
+        if (inputText === '我是??' || inputText === '其他') {
+            newFilteredAnimals = animalsData;
+        }
+
+        // 現在，newFilteredAnimals包含所有動物，無論它們是否已經顯示過
+        filteredAnimals = newFilteredAnimals.filter(animal => {
             const sex = animal.animal_sex === 'M' ? '公' : animal.animal_sex === 'F' ? '母' : '未知';
             const kind = animal.animal_kind.trim().toLowerCase();
             const color = animal.animal_colour.trim().toLowerCase();
@@ -78,22 +90,13 @@ bot.on('message', async (event) => {
                     address.includes(escapedQuery)
                 );
             });
-        });
+        }).slice(0, 10); // 取前10個結果
 
-        // 過濾已顯示的動物
-        filteredAnimals = filteredAnimals.filter(animal => !shownAnimals.has(animal.animal_id)).slice(0, 10);
-
-        // 如果所有動物都已顯示，則清空已顯示動物ID集合並重新開始
-        if (filteredAnimals.length === 0 && shownAnimals.size === animalsData.length) {
-            shownAnimals.clear();
-            filteredAnimals = animalsData.slice(0, 10);
-        }
-
-        // 從未顯示的動物中隨機選擇10個
-        filteredAnimals = filteredAnimals.sort(() => 0.5 - Math.random()).slice(0, 10);
+        // 從篩選後的動物中隨機選擇10個
+        let finalFilteredAnimals = filteredAnimals.sort(() => 0.5 - Math.random()).slice(0, 10);
 
         // 更新已顯示的動物ID集合
-        filteredAnimals.forEach(animal => shownAnimals.add(animal.animal_id));
+        finalFilteredAnimals.forEach(animal => shownAnimals.add(animal.animal_id));
 
         if (filteredAnimals.length > 0) {
             // 創建Flex Message
@@ -135,13 +138,31 @@ bot.on('message', async (event) => {
                                         contents: [
                                             {
                                                 type: 'text',
-                                                text: `類別: ${animal.animal_kind}`,
+                                                text: `收容編號: ${animal.animal_subid}`,
+                                                color: '#aaaaaa',
+                                                size: 'sm'
+                                            },
+                                            {
+                                                type: 'text',
+                                                text: `動物類別: ${animal.animal_kind}`,
+                                                color: '#aaaaaa',
+                                                size: 'sm'
+                                            },
+                                            {
+                                                type: 'text',
+                                                text: `品種: ${animal.animal_Variety}`,
                                                 color: '#aaaaaa',
                                                 size: 'sm'
                                             },
                                             {
                                                 type: 'text',
                                                 text: `性別: ${sex}`,
+                                                color: '#aaaaaa',
+                                                size: 'sm'
+                                            },
+                                            {
+                                                type: 'text',
+                                                text: `體型: ${animal.animal_bodytype}`,
                                                 color: '#aaaaaa',
                                                 size: 'sm'
                                             },
